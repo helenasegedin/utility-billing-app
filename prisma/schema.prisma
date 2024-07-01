@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MeterReading {
+  id                 Int                  @id @default(autoincrement())
+  date               DateTime
+  dayReading         Float?
+  nightReading       Float?
+  totalReading       Float?
+  consumer           Consumer             @relation(fields: [consumerId], references: [id])
+  consumerId         Int
+  utility            Utility
+  paymentCalculation PaymentCalculation[]
+}
+
+model Consumer {
+  id            Int            @id @default(autoincrement())
+  name          String
+  totalShare    Float?
+  meterReadings MeterReading[]
+  bills         Bill[]
+}
+
+enum Utility {
+  ELECTRICITY
+  WATER
+  SEWERAGE
+  WASTE
+}
+
+model Rate {
+  id                 Int                  @id @default(autoincrement())
+  name               BillingComponent
+  utility            Utility
+  startDate          DateTime
+  endDate            DateTime
+  appliesToDay       Boolean              @default(false)
+  appliesToNight     Boolean              @default(false)
+  appliesToTotal     Boolean              @default(true)
+  amount             Float
+  frequency          Int?
+  PaymentCalculation PaymentCalculation[]
+}
+
+enum BillingComponent {
+  ELECTRICITY_TOTAL
+  ELECTRICITY_DAY
+  ELECTRICITY_NIGHT
+  ELECTRICITY_DISTRIBUTION
+  MONTHLY_CHARGE
+  CAPACITY_CHARGE
+  RENEWABLES_CHARGE
+  EXCISE_DUTY
+  VAT
+  WATER
+  SEWERAGE
+  WASTE
+}
+
+model Bill {
+  id                 Int                  @id @default(autoincrement())
+  startDate          DateTime
+  endDate            DateTime
+  status             PaymentStatus        @default(NOT_SENT)
+  paymentDate        DateTime?
+  consumer           Consumer             @relation(fields: [consumerId], references: [id])
+  consumerId         Int
+  paymentCalculation PaymentCalculation[]
+}
+
+enum PaymentStatus {
+  NOT_SENT
+  SENT
+  PAID
+}
+
+model PaymentCalculation {
+  id                 Int            @id @default(autoincrement())
+  billId             Int
+  utilityId          Int
+  rateId             Int
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  calculationDate    DateTime
+  amount             Float
+  utility            Utility
+  bill               Bill           @relation(fields: [billId], references: [id])
+  rate               Rate           @relation(fields: [rateId], references: [id])
+  meterReading       MeterReading[]
+}
